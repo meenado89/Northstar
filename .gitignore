@@ -1,0 +1,26 @@
+# ===== Secrets & Environment =====
+.env
+
+# ===== Python =====
+__pycache__/
+*.pyc
+*.pyo
+
+# ===== Runtime / Local Data =====
+chat_history.json
+*.log
+
+# ===== Build / Distribution =====
+dist/
+build/
+*.exe
+*.spec
+
+# ===== Virtual Environments =====
+venv/
+.venv/
+
+# ===== OS / Editor junk =====
+.DS_Store
+Thumbs.db
+.vscode/
