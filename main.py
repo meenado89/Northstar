@@ -107,7 +107,7 @@ root.bind("f", bring_to_front)
 # LOAD IMAGES WITH ERROR HANDLING
 frames = []
 assets_path = os.path.join(application_path, "assets")
-
+#img loop
 try:
     for i in range(1, 9):
         img_path = os.path.join(assets_path, f"idle{i}.png")
@@ -132,8 +132,8 @@ label.pack()
 
 # SPAWN AT BOTTOM RIGHT
 root.update_idletasks()
-x = root.winfo_screenwidth() - root.winfo_width() - 10
-y = root.winfo_screenheight() - root.winfo_height() - 45
+x = root.winfo_screenwidth() - root.winfo_width() - 14
+y = root.winfo_screenheight() - root.winfo_height() - 46
 root.geometry(f"+{x}+{y}")
 
 # DRAG VARIABLES
@@ -288,7 +288,7 @@ def animate():
     if len(frames) > 0:
         current_frame = (current_frame + 1) % len(frames)
         label.config(image=frames[current_frame])
-    root.after(400, animate)
+    root.after(200, animate)
 
 animate()
 
