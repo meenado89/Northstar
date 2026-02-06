@@ -5,6 +5,7 @@ import sys
 import random
 from tkinter import scrolledtext
 from PIL import Image, ImageTk
+from personality import PET_PERSONALITY
 import google.generativeai as genai
 import os
 import json
@@ -25,7 +26,17 @@ else:
 dotenv_path = os.path.join(application_path, '.env')
 load_dotenv(dotenv_path)
 
-# AI CONFIGURATION (SECURE)
+# AI CONFIGURATION 
+
+PET_PERSONALITY = (
+    "You are Pixel, a small desktop AI pet. "
+    "You are friendly, playful, and emotionally supportive. "
+    "You speak casually like a companion, not an assistant. "
+    "Keep replies short (1–3 sentences). "
+    "Use emojis occasionally. "
+    "Do not mention being an AI or model."
+)
+
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not GEMINI_API_KEY:
@@ -38,6 +49,16 @@ if not GEMINI_API_KEY:
 
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('models/gemini-2.5-flash')
+
+def ask_gemini(user_input):
+    try:
+        prompt = f"{PET_PERSONALITY}\nUser: {user_input}\nPixel:"
+        response = model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        return "😿 Something went wrong… try again?"
+
+
 
 # CHAT HISTORY FOR MEMORY
 chat_history = []
@@ -293,4 +314,5 @@ def animate():
 animate()
 
 print("Cat assistant started! Double-click to chat, Right-click to quit")
+print(ask_gemini("Hello"))
 root.mainloop()
