@@ -1,26 +1,26 @@
-# ===== Secrets & Environment =====
+#Secrets & Environment 
 .env
 
-# ===== Python =====
+# Python 
 __pycache__/
 *.pyc
 *.pyo
 
-# ===== Runtime / Local Data =====
+# Runtime / Local Data 
 chat_history.json
 *.log
 
-# ===== Build / Distribution =====
+# Build / Distribution 
 dist/
 build/
 *.exe
 *.spec
 
-# ===== Virtual Environments =====
+#Virtual Environments 
 venv/
 .venv/
 
-# ===== OS / Editor junk =====
+# OS / Editor junk 
 .DS_Store
 Thumbs.db
 .vscode/

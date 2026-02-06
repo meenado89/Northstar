@@ -9,13 +9,13 @@ through text (and later voice), similar to a digital butler.
 Northstar is intended to run locally, prioritize user control, and gradually
 gain automation capabilities.
 
-## Current Features
+# Current Features
 - Animated desktop companion
 - On-demand chat assistance
 - Persistent local memory
 - Always-available desktop presence
 
-## Planned Features
+# Planned Features
 - Calendar and task reminders
 - Project and study assistance
 - File and folder operations (open, read, write, delete)
@@ -23,10 +23,10 @@ gain automation capabilities.
 - Voice input and output
 - Local-first operation where possible
 
-## Scope
+# Scope
 Northstar is not a general AI or autonomous decision-maker.
 It acts on explicit user intent and assists with organization,
 information, and system-level tasks.
 
-## Status
+# Status
 Early prototype / active development
