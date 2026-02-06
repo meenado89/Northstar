@@ -9,6 +9,8 @@ import google.generativeai as genai
 import os
 import json
 from dotenv import load_dotenv
+import time
+time.sleep(5)  # wait 5 seconds after login
 
 # LOAD ENVIRONMENT VARIABLES
 # Check if running as .exe or script
