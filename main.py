@@ -5,13 +5,14 @@ import sys
 import random
 from tkinter import scrolledtext
 from PIL import Image, ImageTk
-from personality import PET_PERSONALITY
+
 import google.generativeai as genai
 import os
 import json
 from dotenv import load_dotenv
 import time
-time.sleep(5)  # wait 5 seconds after login
+
+chat_session = None
 
 # LOAD ENVIRONMENT VARIABLES
 # Check if running as .exe or script
@@ -27,6 +28,16 @@ dotenv_path = os.path.join(application_path, '.env')
 load_dotenv(dotenv_path)
 
 # AI CONFIGURATION 
+
+STARTUP_GREETINGS = [
+    "Hey!  I was just waiting for you.",
+    "Oh hi!  Wanna chat?",
+    "You’re back! That made my day ",
+    "Hi hi!  What’s up?"
+]
+
+print(random.choice(STARTUP_GREETINGS))
+
 
 PET_PERSONALITY = (
     "You are Pixel, a small desktop AI pet. "
@@ -50,13 +61,13 @@ if not GEMINI_API_KEY:
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('models/gemini-2.5-flash')
 
-def ask_gemini(user_input):
-    try:
-        prompt = f"{PET_PERSONALITY}\nUser: {user_input}\nPixel:"
-        response = model.generate_content(prompt)
-        return response.text.strip()
-    except Exception as e:
-        return "😿 Something went wrong… try again?"
+# def ask_gemini(user_input):
+#     try:
+#         prompt = f"{PET_PERSONALITY}\nUser: {user_input}\nPixel:"
+#         response = model.generate_content(prompt)
+#         return response.text.strip()
+#     except Exception as e:
+#         return "😿 Something went wrong… try again?"
 
 
 
@@ -77,6 +88,11 @@ def load_history():
         chat_history = []
 
 load_history()
+def init_chat_session():
+    global chat_session
+    chat_session = model.start_chat(history=chat_history)
+
+init_chat_session()
 
 # SAVE HISTORY
 def save_history():
@@ -180,28 +196,28 @@ chat_window = None
 
 def open_chat(event=None):
     global chat_window
-    
-    print("Opening chat window...")  # Debug
-    
+
+    print("Opening chat window...")
+
     try:
         if chat_window is not None and chat_window.winfo_exists():
             chat_window.lift()
             return
-        
+
         chat_window = tk.Toplevel(root)
         chat_window.title("Chat with Cat Assistant")
         chat_window.geometry("400x500")
-        
+
         chat_display = scrolledtext.ScrolledText(
-            chat_window, 
-            wrap=tk.WORD, 
-            width=50, 
+            chat_window,
+            wrap=tk.WORD,
+            width=50,
             height=20,
             state='disabled'
         )
         chat_display.pack(padx=10, pady=10)
-        
-        # LOAD EXISTING HISTORY INTO CHAT WINDOW
+
+        # Load history
         chat_display.config(state='normal')
         for msg in chat_history:
             if msg["role"] == "user":
@@ -210,79 +226,68 @@ def open_chat(event=None):
                 chat_display.insert(tk.END, f"Cat: {msg['parts'][0]}\n\n", "assistant")
         chat_display.config(state='disabled')
         chat_display.see(tk.END)
-        
+
         input_frame = tk.Frame(chat_window)
         input_frame.pack(fill=tk.X, padx=10, pady=5)
-        
-        user_input = tk.Entry(input_frame, width=40)
+
+        user_input = tk.Entry(input_frame)
         user_input.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        
+
         def send_message():
             message = user_input.get().strip()
             if not message:
                 return
-            
+
             user_input.delete(0, tk.END)
-            
+
             chat_display.config(state='normal')
             chat_display.insert(tk.END, f"You: {message}\n", "user")
             chat_display.config(state='disabled')
-            chat_display.see(tk.END)
-            
+
             chat_history.append({"role": "user", "parts": [message]})
-            
+
             try:
-                chat = model.start_chat(history=chat_history[:-1])
-                response = chat.send_message(message)
+                response = chat_session.send_message(message)
                 ai_reply = response.text
-                
+
                 chat_history.append({"role": "model", "parts": [ai_reply]})
-                
+
                 chat_display.config(state='normal')
                 chat_display.insert(tk.END, f"Cat: {ai_reply}\n\n", "assistant")
                 chat_display.config(state='disabled')
                 chat_display.see(tk.END)
-                
-                # AUTO-SAVE AFTER EACH MESSAGE
+
                 save_history()
-                
+
             except Exception as e:
-                error_msg = f"Error: {str(e)}\n"
-                if "API key not valid" in str(e):
-                    error_msg += "Check your .env file!\n"
-                elif "quota" in str(e).lower():
-                    error_msg += "API quota exceeded.\n"
-                
                 chat_display.config(state='normal')
-                chat_display.insert(tk.END, error_msg + "\n", "error")
+                chat_display.insert(tk.END, f"Error: {e}\n", "error")
                 chat_display.config(state='disabled')
-        
+
         def clear_chat_history():
             global chat_history
-            if len(chat_history) == 0:
-                return
             chat_history = []
             save_history()
             chat_display.config(state='normal')
             chat_display.delete(1.0, tk.END)
             chat_display.insert(tk.END, "History cleared!\n\n", "error")
             chat_display.config(state='disabled')
-        
+
         send_button = tk.Button(input_frame, text="Send", command=send_message)
         send_button.pack(side=tk.RIGHT, padx=5)
-        
+
         clear_button = tk.Button(input_frame, text="Clear", command=clear_chat_history)
         clear_button.pack(side=tk.RIGHT, padx=5)
-        
+
         user_input.bind("<Return>", lambda e: send_message())
         user_input.focus()
-        
+
         chat_display.tag_config("user", foreground="blue")
         chat_display.tag_config("assistant", foreground="green")
         chat_display.tag_config("error", foreground="red")
-        
+
         print("Chat window opened successfully!")
-        
+
     except Exception as e:
         print(f"Error opening chat: {e}")
         import traceback
@@ -314,5 +319,5 @@ def animate():
 animate()
 
 print("Cat assistant started! Double-click to chat, Right-click to quit")
-print(ask_gemini("Hello"))
+
 root.mainloop()
