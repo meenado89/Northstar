@@ -1,4 +1,7 @@
 import tkinter as tk
+from tkinter import messagebox
+from tkinter import scrolledtext
+import sys
 import random
 from tkinter import scrolledtext
 from PIL import Image, ImageTk
@@ -8,21 +11,35 @@ import json
 from dotenv import load_dotenv
 
 # LOAD ENVIRONMENT VARIABLES
-load_dotenv()
+# Check if running as .exe or script
+if getattr(sys, 'frozen', False):
+    # Running as .exe - look in exe directory
+    application_path = os.path.dirname(sys.executable)
+else:
+    # Running as script
+    application_path = os.path.dirname(os.path.abspath(__file__))
+
+# Load .env from exe directory
+dotenv_path = os.path.join(application_path, '.env')
+load_dotenv(dotenv_path)
 
 # AI CONFIGURATION (SECURE)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not GEMINI_API_KEY:
     print("ERROR: API key not found! Create a .env file with your key.")
-    exit()
+    # Don't exit immediately in .exe, show error window
+    root_error = tk.Tk()
+    root_error.withdraw()
+    messagebox.showerror("Error", "API key not found!\nCreate .env file with GEMINI_API_KEY")
+    sys.exit(1)
 
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('models/gemini-2.5-flash')
 
 # CHAT HISTORY FOR MEMORY
 chat_history = []
-HISTORY_FILE = "chat_history.json"
+HISTORY_FILE = os.path.join(application_path, "chat_history.json")
 
 # LOAD SAVED HISTORY
 def load_history():
@@ -56,25 +73,26 @@ root.wm_attributes("-transparentcolor", "white")
 
 # QUIT WITH SAVE FUNCTION
 def quit_with_save(event=None):
+    print("Quitting and saving...")
     save_history()
     root.destroy()
 
 root.bind("<Escape>", quit_with_save)
 
 # TOGGLE FUNCTIONS
-def toggle_topmost(event):
+def toggle_topmost(event=None):
     global is_topmost
     is_topmost = not is_topmost
     root.attributes("-topmost", is_topmost)
     print(f"Always on top: {is_topmost}")
 
-def send_to_back(event):
+def send_to_back(event=None):
     global is_topmost
     is_topmost = False
     root.attributes("-topmost", False)
     print("Sent to back")
 
-def bring_to_front(event):
+def bring_to_front(event=None):
     global is_topmost
     is_topmost = True
     root.attributes("-topmost", True)
@@ -84,17 +102,27 @@ root.bind("t", toggle_topmost)
 root.bind("b", send_to_back)
 root.bind("f", bring_to_front)
 
-# ADDING IDLE FRAMES
-frames = [
-    ImageTk.PhotoImage(Image.open("assets/idle1.png")),
-    ImageTk.PhotoImage(Image.open("assets/idle2.png")),
-    ImageTk.PhotoImage(Image.open("assets/idle3.png")),
-    ImageTk.PhotoImage(Image.open("assets/idle4.png")),
-    ImageTk.PhotoImage(Image.open("assets/idle5.png")),
-    ImageTk.PhotoImage(Image.open("assets/idle6.png")),
-    ImageTk.PhotoImage(Image.open("assets/idle7.png")),
-    ImageTk.PhotoImage(Image.open("assets/idle8.png")),
-]
+# LOAD IMAGES WITH ERROR HANDLING
+frames = []
+assets_path = os.path.join(application_path, "assets")
+
+try:
+    for i in range(1, 9):
+        img_path = os.path.join(assets_path, f"idle{i}.png")
+        if os.path.exists(img_path):
+            frames.append(ImageTk.PhotoImage(Image.open(img_path)))
+        else:
+            print(f"Warning: {img_path} not found")
+    
+    if len(frames) == 0:
+        raise Exception("No animation frames found!")
+        
+except Exception as e:
+    print(f"Error loading images: {e}")
+    root_error = tk.Tk()
+    root_error.withdraw()
+    messagebox.showerror("Error", f"Could not load images!\n{e}")
+    sys.exit(1)
 
 current_frame = 0
 label = tk.Label(root, image=frames[0], bg="white")
@@ -120,128 +148,147 @@ def do_move(event):
     y = event.y_root - y_offset
     root.geometry(f"+{x}+{y}")
 
+# IMPORTANT: Bind to label, not root
 label.bind("<Button-1>", start_move)
 label.bind("<B1-Motion>", do_move)
 
 # CHAT WINDOW
 chat_window = None
 
-def open_chat(event):
+def open_chat(event=None):
     global chat_window
     
-    if chat_window is not None and chat_window.winfo_exists():
-        chat_window.lift()
-        return
+    print("Opening chat window...")  # Debug
     
-    chat_window = tk.Toplevel(root)
-    chat_window.title("Chat with Cat Assistant")
-    chat_window.geometry("400x500")
-    
-    chat_display = scrolledtext.ScrolledText(
-        chat_window, 
-        wrap=tk.WORD, 
-        width=50, 
-        height=20,
-        state='disabled'
-    )
-    chat_display.pack(padx=10, pady=10)
-    
-    # LOAD EXISTING HISTORY INTO CHAT WINDOW
-    chat_display.config(state='normal')
-    for msg in chat_history:
-        if msg["role"] == "user":
-            chat_display.insert(tk.END, f"You: {msg['parts'][0]}\n", "user")
-        elif msg["role"] == "model":
-            chat_display.insert(tk.END, f"Cat: {msg['parts'][0]}\n\n", "assistant")
-    chat_display.config(state='disabled')
-    chat_display.see(tk.END)
-    
-    input_frame = tk.Frame(chat_window)
-    input_frame.pack(fill=tk.X, padx=10, pady=5)
-    
-    user_input = tk.Entry(input_frame, width=40)
-    user_input.pack(side=tk.LEFT, fill=tk.X, expand=True)
-    
-    def send_message():
-        message = user_input.get().strip()
-        if not message:
+    try:
+        if chat_window is not None and chat_window.winfo_exists():
+            chat_window.lift()
             return
         
-        user_input.delete(0, tk.END)
+        chat_window = tk.Toplevel(root)
+        chat_window.title("Chat with Cat Assistant")
+        chat_window.geometry("400x500")
         
+        chat_display = scrolledtext.ScrolledText(
+            chat_window, 
+            wrap=tk.WORD, 
+            width=50, 
+            height=20,
+            state='disabled'
+        )
+        chat_display.pack(padx=10, pady=10)
+        
+        # LOAD EXISTING HISTORY INTO CHAT WINDOW
         chat_display.config(state='normal')
-        chat_display.insert(tk.END, f"You: {message}\n", "user")
+        for msg in chat_history:
+            if msg["role"] == "user":
+                chat_display.insert(tk.END, f"You: {msg['parts'][0]}\n", "user")
+            elif msg["role"] == "model":
+                chat_display.insert(tk.END, f"Cat: {msg['parts'][0]}\n\n", "assistant")
         chat_display.config(state='disabled')
         chat_display.see(tk.END)
         
-        chat_history.append({"role": "user", "parts": [message]})
+        input_frame = tk.Frame(chat_window)
+        input_frame.pack(fill=tk.X, padx=10, pady=5)
         
-        try:
-            chat = model.start_chat(history=chat_history[:-1])
-            response = chat.send_message(message)
-            ai_reply = response.text
+        user_input = tk.Entry(input_frame, width=40)
+        user_input.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        
+        def send_message():
+            message = user_input.get().strip()
+            if not message:
+                return
             
-            chat_history.append({"role": "model", "parts": [ai_reply]})
+            user_input.delete(0, tk.END)
             
             chat_display.config(state='normal')
-            chat_display.insert(tk.END, f"Cat: {ai_reply}\n\n", "assistant")
+            chat_display.insert(tk.END, f"You: {message}\n", "user")
             chat_display.config(state='disabled')
             chat_display.see(tk.END)
             
-            # AUTO-SAVE AFTER EACH MESSAGE
+            chat_history.append({"role": "user", "parts": [message]})
+            
+            try:
+                chat = model.start_chat(history=chat_history[:-1])
+                response = chat.send_message(message)
+                ai_reply = response.text
+                
+                chat_history.append({"role": "model", "parts": [ai_reply]})
+                
+                chat_display.config(state='normal')
+                chat_display.insert(tk.END, f"Cat: {ai_reply}\n\n", "assistant")
+                chat_display.config(state='disabled')
+                chat_display.see(tk.END)
+                
+                # AUTO-SAVE AFTER EACH MESSAGE
+                save_history()
+                
+            except Exception as e:
+                error_msg = f"Error: {str(e)}\n"
+                if "API key not valid" in str(e):
+                    error_msg += "Check your .env file!\n"
+                elif "quota" in str(e).lower():
+                    error_msg += "API quota exceeded.\n"
+                
+                chat_display.config(state='normal')
+                chat_display.insert(tk.END, error_msg + "\n", "error")
+                chat_display.config(state='disabled')
+        
+        def clear_chat_history():
+            global chat_history
+            if len(chat_history) == 0:
+                return
+            chat_history = []
             save_history()
-            
-        except Exception as e:
-            error_msg = f"Error: {str(e)}\n"
-            if "API key not valid" in str(e):
-                error_msg += "Check your .env file!\n"
-            elif "quota" in str(e).lower():
-                error_msg += "API quota exceeded.\n"
-            
             chat_display.config(state='normal')
-            chat_display.insert(tk.END, error_msg + "\n", "error")
+            chat_display.delete(1.0, tk.END)
+            chat_display.insert(tk.END, "History cleared!\n\n", "error")
             chat_display.config(state='disabled')
-    
-    def clear_chat_history():
-        global chat_history
-        if len(chat_history) == 0:
-            return
-        chat_history = []
-        save_history()
-        chat_display.config(state='normal')
-        chat_display.delete(1.0, tk.END)
-        chat_display.insert(tk.END, "History cleared!\n\n", "error")
-        chat_display.config(state='disabled')
-    
-    send_button = tk.Button(input_frame, text="Send", command=send_message)
-    send_button.pack(side=tk.RIGHT, padx=5)
-    
-    clear_button = tk.Button(input_frame, text="Clear", command=clear_chat_history)
-    clear_button.pack(side=tk.RIGHT, padx=5)
-    
-    user_input.bind("<Return>", lambda e: send_message())
-    user_input.focus()
-    
-    chat_display.tag_config("user", foreground="blue")
-    chat_display.tag_config("assistant", foreground="green")
-    chat_display.tag_config("error", foreground="red")
+        
+        send_button = tk.Button(input_frame, text="Send", command=send_message)
+        send_button.pack(side=tk.RIGHT, padx=5)
+        
+        clear_button = tk.Button(input_frame, text="Clear", command=clear_chat_history)
+        clear_button.pack(side=tk.RIGHT, padx=5)
+        
+        user_input.bind("<Return>", lambda e: send_message())
+        user_input.focus()
+        
+        chat_display.tag_config("user", foreground="blue")
+        chat_display.tag_config("assistant", foreground="green")
+        chat_display.tag_config("error", foreground="red")
+        
+        print("Chat window opened successfully!")
+        
+    except Exception as e:
+        print(f"Error opening chat: {e}")
+        import traceback
+        traceback.print_exc()
 
+# BIND DOUBLE-CLICK TO LABEL
 label.bind("<Double-Button-1>", open_chat)
 
+# ADD KEYBOARD SHORTCUT TOO
+root.bind("c", open_chat)
+
 # QUIT WITH SAVE
-def quit_pet(event):
+def quit_pet(event=None):
+    print("Right-click quit triggered")
     save_history()
     root.destroy()
 
+# BIND RIGHT-CLICK TO LABEL
 label.bind("<Button-3>", quit_pet)
 
 # ANIMATION
 def animate():
     global current_frame
-    current_frame = (current_frame + 1) % len(frames)
-    label.config(image=frames[current_frame])
+    if len(frames) > 0:
+        current_frame = (current_frame + 1) % len(frames)
+        label.config(image=frames[current_frame])
     root.after(400, animate)
 
 animate()
 
+print("Cat assistant started! Double-click to chat, Right-click to quit")
 root.mainloop()
