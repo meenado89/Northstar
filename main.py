@@ -61,12 +61,12 @@ print(f"\nLooking for images in: {assets_path}")
 
 try:
     for i in range(1, 9):
-        img_path = os.path.join(assets_path, f"Bidle{i}.png")
+        img_path = os.path.join(assets_path, f"Didle{i}.png")
         if os.path.exists(img_path):
             frames.append(ImageTk.PhotoImage(Image.open(img_path)))
-            print(f"  ✓ Loaded idle{i}.png")
+            print(f"  ✓ Loaded Didle{i}.png")
         else:
-            print(f"  ⚠️  idle{i}.png not found")
+            print(f"    Didle{i}.png not found")
     
     if len(frames) == 0:
         raise Exception("No animation frames found in assets folder!")
@@ -74,8 +74,8 @@ try:
     print(f"\n✓ Loaded {len(frames)} frames successfully\n")
     
 except Exception as e:
-    print(f"\n❌ Error: {e}")
-    print("Make sure you have an 'assets' folder with idle1.png to idle8.png")
+    print(f"\n Error: {e}")
+    print("Make sure you have an 'assets' in both asset folders")
     root.destroy()
     sys.exit(1)
 
@@ -85,8 +85,8 @@ label.pack()
 
 # SPAWN AT BOTTOM RIGHT
 root.update_idletasks()
-x = root.winfo_screenwidth() - root.winfo_width() - 10
-y = root.winfo_screenheight() - root.winfo_height() - 45
+x = root.winfo_screenwidth() - root.winfo_width() - 15
+y = root.winfo_screenheight() - root.winfo_height() - 56
 root.geometry(f"+{x}+{y}")
 
 print(f"Window position: x={x}, y={y}")
@@ -98,7 +98,7 @@ def animate():
     if frames:
         current_frame = (current_frame + 1) % len(frames)
         label.config(image=frames[current_frame])
-    root.after(62000, animate)
+    root.after(300, animate)
 animate()
 
 # DRAG VARIABLES
